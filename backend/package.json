@@ -4,10 +4,12 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "db:migrate": "npx prisma migrate dev",
-    "db:studio": "npx prisma studio"
-  },
+  "dev": "nodemon src/index.js",
+  "start": "node src/index.js",
+  "postinstall": "npx prisma generate",
+  "db:migrate": "npx prisma migrate deploy",
+  "db:studio": "npx prisma studio"
+},
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@prisma/adapter-pg": "^7.8.0",

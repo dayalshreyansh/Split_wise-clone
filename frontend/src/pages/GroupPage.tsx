@@ -162,7 +162,7 @@ export default function GroupPage() {
                     <p className="font-bold text-slate-800 text-lg">{exp.description}</p>
                     <p className="text-sm text-slate-400">Paid by {exp.paidBy?.name}</p>
                   </div>
-                  <span className="text-xl font-mono font-bold text-slate-900">${exp.totalAmount}</span>
+                  <span className="text-xl font-mono font-bold text-slate-900">₹{exp.totalAmount}</span>
                 </div>
               ))}
             </section>
@@ -350,36 +350,21 @@ export default function GroupPage() {
  * SETTLEMENT COMPONENT: Handles the three-state settlement machine.
  * 
  */
-const SettlementSection = ({ settlements, currentUserId, loadGroupDetails }) => {
+const SettlementSection = ({
+  settlements,
+  currentUserId,
+  loadGroupDetails,
+}) => {
   const handleRequest = async (s) => {
   try {
-    await settlementService.requestPayment(
-      groupId,
-      s.settlementId
-    );
+    console.log("REQUEST CLICKED:", s);
 
-    alert("Payment request sent.");
-    loadGroupDetails();
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const handleConfirm = async (settlementId) => {
-  try {
-    await settlementService.confirm(settlementId);
-    loadGroupDetails();
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const handleSettle = async (s) => {
-  try {
     let settlementId = s.settlementId;
 
-    // Create settlement if it doesn't exist
+    // Create settlement first
     if (!settlementId) {
+      console.log("Creating settlement...");
+
       const res =
         await settlementService.create({
           groupId: s.groupId,
@@ -388,106 +373,269 @@ const handleSettle = async (s) => {
           amount: s.amount,
         });
 
+      console.log(
+        "Settlement created:",
+        res.data
+      );
+
       settlementId =
         res.data.settlement.id;
     }
 
-    // Mark as paid
-    await settlementService.settle(
+    console.log(
+      "Sending payment request:",
       settlementId
     );
 
+    await settlementService.requestPayment(
+      s.groupId,
+      settlementId
+    );
+
+    alert("Payment request sent.");
+
     loadGroupDetails();
   } catch (err) {
-    console.error(err);
+    console.error(
+      "REQUEST ERROR",
+      err.response?.data || err
+    );
 
     alert(
       err.response?.data?.message ||
-      "Failed to settle debt."
+      "Failed to request payment."
     );
   }
 };
 
-  return (
-  <div className="bg-white p-10 rounded-3xl shadow-sm border border-slate-100">
-    <h2 className="text-2xl font-bold text-slate-900 mb-8">
-      Balance Overview
-    </h2>
+  const handleConfirm = async (settlementId) => {
+    try {
+      console.log(
+        "CONFIRM SETTLEMENT:",
+        settlementId
+      );
 
-    {settlements
-      .filter(
-        (s) => String(s.fromUserId) !== String(s.toUserId)
-      )
-      .map((s, i) => {
-        const isDebtor =
-          String(s.fromUserId) === String(currentUserId);
+      await settlementService.confirm(
+        settlementId
+      );
 
-        const isCreditor =
-          String(s.toUserId) === String(currentUserId);
+      loadGroupDetails();
+    } catch (err) {
+      console.error(
+        "CONFIRM SETTLEMENT ERROR",
+        err
+      );
+    }
+  };
 
-        const isPending =
-          s.status === "PENDING_CONFIRMATION";
-        const isConfirmed =
-          s.status === "CONFIRMED";
-        return (
-          <div
-            key={i}
-            className="flex items-center justify-between bg-slate-50 p-6 rounded-2xl mb-4 border border-slate-100"
-          >
-            <p className="text-md text-slate-700">
-              <span className="font-bold">
-                {isDebtor ? "You" : s.fromName}
-              </span>
+  const handleSettle = async (s) => {
+    try {
+      console.log("SETTLE CLICKED:", s);
 
-              {" owe "}
+      let settlementId = s.settlementId;
 
-              <span className="font-bold">
-                {isCreditor ? "You" : s.toName}
-              </span>
-
-              <span className="ml-3 font-bold text-emerald-600 text-lg">
-                ${s.amount}
-              </span>
-            </p>
-
-            {/* Logged-in user owes money */}
-            {isDebtor && !isPending && (
-              <button
-                onClick={() => handleSettle(s.settlementId)}
-                className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-700"
-              >
-                Settle Debt
-              </button>
-            )}
-
-            {/* Logged-in user should confirm payment */}
-            {isCreditor && isPending && (
-              <button
-                onClick={() => handleConfirm(s.settlementId)}
-                className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700"
-              >
-                Confirm Receipt
-              </button>
-            )}
-
-            {/* Logged-in user can request payment */}
-            {isCreditor && !isPending && (
-              <button
-                onClick={() => handleRequest(s)}
-                className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-black"
-              >
-                Request Payment
-              </button>
-            )}
-
-            {/* Debtor waiting for confirmation */}
-            {isDebtor && isPending && (
-              <span className="px-4 py-2 rounded-xl bg-yellow-100 text-yellow-700 font-semibold text-sm">
-                Waiting for Confirmation
-              </span>
-            )}
-          </div>
+      // create settlement first if it doesn't exist
+      if (!settlementId) {
+        console.log(
+          "Creating new settlement..."
         );
-      })}
-  </div>
-)};
+
+        const res =
+          await settlementService.create({
+            groupId: s.groupId,
+            payerId: s.fromUserId,
+            payeeId: s.toUserId,
+            amount: s.amount,
+          });
+
+        console.log(
+          "Settlement created:",
+          res.data
+        );
+
+        settlementId =
+          res.data.settlement.id;
+      }
+
+      console.log(
+        "Marking settlement as paid:",
+        settlementId
+      );
+
+      await settlementService.settle(
+        settlementId
+      );
+
+      loadGroupDetails();
+    } catch (err) {
+      console.error(
+        "SETTLE ERROR",
+        err.response?.data || err
+      );
+
+      alert(
+        err.response?.data?.message ||
+          "Failed to settle debt."
+      );
+    }
+  };
+
+  console.log(
+    "CURRENT USER:",
+    currentUserId
+  );
+
+  console.log(
+    "ALL SETTLEMENTS:",
+    settlements
+  );
+
+  return (
+    <div className="bg-white p-10 rounded-3xl shadow-sm border border-slate-100">
+      <h2 className="text-2xl font-bold text-slate-900 mb-8">
+        Balance Overview
+      </h2>
+
+      {settlements.length === 0 && (
+        <p className="text-slate-500">
+          No balances to settle.
+        </p>
+      )}
+
+      {settlements
+        .filter(
+          (s) =>
+            String(s.fromUserId) !==
+            String(s.toUserId)
+        )
+        .map((s, i) => {
+          const isDebtor =
+            String(s.fromUserId) ===
+            String(currentUserId);
+
+          const isCreditor =
+            String(s.toUserId) ===
+            String(currentUserId);
+
+          const isPending =
+            s.status ===
+            "PENDING_CONFIRMATION";
+
+          const isConfirmed =
+            s.status === "CONFIRMED";
+
+          console.log("-------------");
+          console.log("Settlement:", s);
+          console.log(
+            "currentUserId:",
+            currentUserId
+          );
+          console.log(
+            "fromUserId:",
+            s.fromUserId
+          );
+          console.log(
+            "toUserId:",
+            s.toUserId
+          );
+          console.log(
+            "isDebtor:",
+            isDebtor
+          );
+          console.log(
+            "isCreditor:",
+            isCreditor
+          );
+          console.log(
+            "status:",
+            s.status
+          );
+
+          return (
+            <div
+              key={i}
+              className="flex items-center justify-between bg-slate-50 p-6 rounded-2xl mb-4 border border-slate-100"
+            >
+              <p className="text-md text-slate-700">
+                <span className="font-bold">
+                  {isDebtor
+                    ? "You"
+                    : s.fromName}
+                </span>
+
+                {" owe "}
+
+                <span className="font-bold">
+                  {isCreditor
+                    ? "You"
+                    : s.toName}
+                </span>
+
+                <span className="ml-3 font-bold text-emerald-600 text-lg">
+                  ₹{s.amount}
+                </span>
+              </p>
+
+              {/* Debtor */}
+              {isDebtor &&
+                !isPending &&
+                !isConfirmed && (
+                  <button
+                    onClick={() =>
+                      handleSettle(s)
+                    }
+                    className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-emerald-700"
+                  >
+                    Settle Debt
+                  </button>
+                )}
+
+              {/* Creditor waiting for confirmation */}
+              {isCreditor &&
+                isPending && (
+                  <button
+                    onClick={() =>
+                      handleConfirm(
+                        s.settlementId
+                      )
+                    }
+                    className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700"
+                  >
+                    Confirm Receipt
+                  </button>
+                )}
+
+              {/* Creditor can request */}
+              {isCreditor &&
+                !isPending &&
+                !isConfirmed && (
+                  <button
+                    onClick={() =>
+                      handleRequest(s)
+                    }
+                    className="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-black"
+                  >
+                    Request Payment
+                  </button>
+                )}
+
+              {/* Debtor waiting */}
+              {isDebtor &&
+                isPending && (
+                  <span className="px-4 py-2 rounded-xl bg-yellow-100 text-yellow-700 font-semibold text-sm">
+                    Waiting for Confirmation
+                  </span>
+                )}
+
+              {/* Completed */}
+              {isConfirmed && (
+                <span className="px-4 py-2 rounded-xl bg-green-100 text-green-700 font-semibold text-sm">
+                  Settled
+                </span>
+              )}
+            </div>
+          );
+        })}
+    </div>
+  );
+};

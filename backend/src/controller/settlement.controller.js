@@ -144,42 +144,42 @@ export const createSettlement = async (req, res) => {
       });
     }
 
-    // prevent duplicate active settlement
-    const existingSettlement =
-      await prisma.settlement.findUnique({
-        where: {
-          groupId_payerId_payeeId: {
-            groupId,
-            payerId,
-            payeeId,
-          },
-        },
-      });
+    // FIX: Use findFirst instead of findUnique.
+    // This allows us to query by the triplet AND the status, 
+    // ensuring we only block "PENDING" settlements.
+    const existingSettlement = await prisma.settlement.findFirst({
+      where: {
+        groupId,
+        payerId,
+        payeeId,
+        status: "PENDING", // Only block if a settlement is still active
+      },
+    });
 
     if (existingSettlement) {
       return res.status(200).json({
-        message: "Settlement already exists",
+        message: "An active settlement already exists",
         settlement: existingSettlement,
       });
     }
 
-    const settlement =
-      await prisma.settlement.create({
-        data: {
-          groupId,
-          payerId,
-          payeeId,
-          amount,
-          status: "PENDING",
-        },
-      });
+    // Create the new settlement with status PENDING
+    const settlement = await prisma.settlement.create({
+      data: {
+        groupId,
+        payerId,
+        payeeId,
+        amount,
+        status: "PENDING",
+      },
+    });
 
     res.status(201).json({
       message: "Settlement created",
       settlement,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Settlement Creation Error:", error);
 
     res.status(500).json({
       message: "Failed to create settlement",

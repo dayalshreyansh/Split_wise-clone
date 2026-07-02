@@ -115,7 +115,6 @@ model Settlement {
   @@index([status])
 
   // Prevent duplicate active settlements
-  @@index([groupId, payerId, payeeId])
 }
 
 enum SettlementStatus {

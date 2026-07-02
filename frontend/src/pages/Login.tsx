@@ -20,6 +20,8 @@ export default function Login() {
       });
 
       localStorage.setItem("token", data.token);
+      localStorage.setItem("userId", data.user.id);
+
       setUser(data.user);
       navigate("/");
     } catch (err) {
