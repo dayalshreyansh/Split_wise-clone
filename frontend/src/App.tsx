@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import GroupPage from './pages/GroupPage';
 import Navbar from './components/Navbar';
+import LandingPage from './pages/LandingPage';
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { user } = useAuth();
@@ -21,30 +22,46 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const { user } = useAuth();
+
   return (
     <Routes>
       {/* Public Routes */}
+      <Route
+        path="/"
+        element={
+          user
+            ? <Navigate to="/dashboard" />
+            : <LandingPage />
+        }
+      />
+
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      
-      {/* Protected Routes wrapped in Layout */}
-      <Route path="/" element={
-        <PrivateRoute>
-          <Layout>
-            <Home />
-          </Layout>
-        </PrivateRoute>
-      } />
-      
-      <Route path="/group/:groupId" element={
-        <PrivateRoute>
-          <Layout>
-            <GroupPage />
-          </Layout>
-        </PrivateRoute>
-      } />
 
-      {/* Redirect unknown routes */}
+      {/* Protected Routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <Home />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+
+      <Route
+        path="/group/:groupId"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <GroupPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
