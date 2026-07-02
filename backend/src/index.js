@@ -19,12 +19,21 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(
-  cors({
-    origin: "https://split-wise-clone-1-c70a.onrender.com",
-    credentials: true,
-  })
-);
+const allowedOrigins = [
+  "https://split-wise-clone-1-c70a.onrender.com", 
+  "http://localhost:5173" 
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+}));
 
 app.use(express.json());
 
