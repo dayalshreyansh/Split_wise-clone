@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://split-wise-clone-1-c70a.onrender.com",
     credentials: true,
   })
 );
