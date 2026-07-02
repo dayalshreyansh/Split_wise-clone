@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -------------------------------------------------
+// 1. USER AUTHENTICATION & PROFILE
+// -------------------------------------------------
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  memberships   GroupMember[]
+  expensesPaid  Expense[]      @relation("PaidBy")
+  splits        ExpenseSplit[]
+  debtsToPay    Settlement[]   @relation("Payer")
+  debtsToRecv   Settlement[]   @relation("Payee")
+  
+  // New relation fields
+  sentInvites     Invitation[]   @relation("Inviter")
+  notifications   Notification[]
+}
+
+// -------------------------------------------------
+// 2. GROUPS & MEMBERSHIPS
+// -------------------------------------------------
+model Group {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  members      GroupMember[]
+  expenses     Expense[]
+  invitations  Invitation[]
+  settlements  Settlement[]
+}
+
+model GroupMember {
+  id      String @id @default(uuid())
+  groupId String
+  userId  String
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+}
+
+// -------------------------------------------------
+// 3. THE LEDGER (EXPENSES & SPLITS)
+// -------------------------------------------------
+model Expense {
+  id          String   @id @default(uuid())
+  groupId     String
+  description String
+  totalAmount Decimal
+  
+  splitType   SplitType @default(EXACT)
+  
+  paidById    String
+  createdAt   DateTime @default(now())
+  
+  group       Group    @relation(fields: [groupId], references: [id])
+  paidBy      User     @relation("PaidBy", fields: [paidById], references: [id])
+  splits      ExpenseSplit[]
+
+  @@index([groupId])
+  @@index([createdAt])
+}
+
+model ExpenseSplit {
+  id        String  @id @default(uuid())
+  expenseId String
+  userId    String
+  owedAmount Decimal @db.Decimal(12, 2)
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@unique([expenseId, userId])
+}
+
+// -------------------------------------------------
+// 4. SETTLEMENTS (PAYING BACK DEBTS)
+// -------------------------------------------------
+model Settlement {
+  id        String   @id @default(uuid())
+  groupId   String
+
+  payerId   String
+  payeeId   String
+
+  amount    Decimal  @db.Decimal(12, 2)
+
+  status    SettlementStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  payer User @relation("Payer", fields: [payerId], references: [id])
+  payee User @relation("Payee", fields: [payeeId], references: [id])
+
+  @@index([groupId])
+  @@index([payerId])
+  @@index([payeeId])
+  @@index([status])
+
+  // Prevent duplicate active settlements
+  @@index([groupId, payerId, payeeId])
+}
+
+enum SettlementStatus {
+  PENDING
+  PENDING_CONFIRMATION
+  CONFIRMED
+}
+// -------------------------------------------------
+// 5. NEW: INVITATIONS & NOTIFICATIONS
+// -------------------------------------------------
+model Invitation {
+  id           String   @id @default(uuid())
+  groupId      String
+  inviterId    String
+  inviteeEmail String
+  token        String   @unique
+  status       InviteStatus @default(PENDING)
+  createdAt    DateTime @default(now())
+
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  inviter User  @relation("Inviter", fields: [inviterId], references: [id])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  recipientId String
+  message     String
+  type        String   // e.g., "SETTLEMENT_REQUEST"
+  status      String   @default("UNREAD") // "UNREAD", "READ"
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENTAGE
+  SHARE
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+}

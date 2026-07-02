@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>User B's Phone</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f5; }
+        .notification { background: white; padding: 15px; border-left: 5px solid #10b981; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <h2>Live Group Notifications 🔔</h2>
+    <div id="feed">Waiting for activity...</div>
+
+    <script>
+        // 1. Connect silently to your backend
+        const socket = io('http://localhost:5000');
+
+        // 2. Listen for the exact event name we used in the controller
+        socket.on('new_expense_alert', (data) => {
+            const feed = document.getElementById('feed');
+            if (feed.innerText === "Waiting for activity...") feed.innerHTML = "";
+            
+            // 3. Render the push notification
+            feed.innerHTML = `
+                <div class="notification">
+                    <strong>${data.title}</strong><br>
+                    ${data.message} <br>
+                    <small style="color: gray;">Just now</small>
+                </div>
+            ` + feed.innerHTML;
+        });
+    </script>
+</body>
+</html>
