@@ -14,11 +14,10 @@ export const getAllNotification = async (req, res) => {
             orderBy: { createdAt: 'desc' }
         });
         
-        // Change this line from 'notification' to 'notifications'
         res.status(200).json(notifications); 
         
     } catch (error) {
-        console.error("Fetch Error:", error); // Added for better debugging
+        console.error("Fetch Error:", error); 
         res.status(500).json({ message: "Failed to fetch notifications" });
     }
 };

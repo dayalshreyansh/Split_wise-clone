@@ -21,7 +21,7 @@ router.get('/:groupId/balances', protect, getGroupBalances);
 
 // New routes for your new features
 
-router.post('/:groupId/settlement-request', protect, sendSettlementRequest); 
+
 
 router.use('/:groupId/expenses', expenseRoutes);
 export default router;
