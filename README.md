@@ -88,8 +88,8 @@ Uses Socket.IO to facilitate real-time communication between the frontend and ba
 1. Clone the repository:
 
    ```bash
-   git clone <YOUR_REPOSITORY_URL>
-   cd <PROJECT_DIRECTORY>
+   git clone https://github.com/dayalshreyansh/Split_wise-clone.git
+   cd Split_wise-clone
    ```
 
 2. Install dependencies:
